@@ -16,7 +16,7 @@ example to start with, and also to give a Green-Yellow-Red range for PM 2.5 valu
 I used the manufacturer-recommended 01Space Graphics Test sketch to start, then once I'd settled issues and gotten a working environment, I moved to the examples below and connected to my own internal MQTT server.
 
 # Provenance
-Cobbled together from these:
+Cobbled together from these examples:
 - https://github.com/01Space/ESP32-C3-0.42LCD.git
 - https://github.com/survivingwithandroid/ESP32-MQTT.git
 
