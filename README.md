@@ -20,7 +20,7 @@ Cobbled together from these examples:
 - https://github.com/01Space/ESP32-C3-0.42LCD.git
 - https://github.com/survivingwithandroid/ESP32-MQTT.git
 
-# Issues
+# Issues Overcome
 - Set CDC on Boot in Arduino IDE Menu to make Serial.print work
 - Direct USB-C cable to Linux desktop worked best
 - Multiple copies of u8g2 and u8g2_arduino installed with different fonts
