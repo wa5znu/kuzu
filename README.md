@@ -9,7 +9,7 @@ a Neopixel-like LED.  They have them in RP2040 as well, and I have one of those 
 I'm using Arduino IDE for this, but I think there's a MicroPython distribution for it as well, just as there is for the RP2040-based one.
 Unlike the RP2040, though, the ESP32-C3 includes WiFi and BLE, both useful for projects around the house.
 
-The LED was a painfully blue from the start, so I brought in the
+The LED was a painfully bright blue from the start, so I brought in the
 Adafruit NeoPixel library to cut it back, using the Adafruit blink
 example to start with.
 
