@@ -48,21 +48,26 @@ void connectToWiFi() {
   u8g2.drawStr(0, 10, SSID);
   u8g2.sendBuffer();
 
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    delay(500);
+  {
+    u8g2.setFont(u8g2_font_unifont_t_symbols);
+    while (WiFi.status() != WL_CONNECTED) {
+      u8g2.drawUTF8(0, 64, "☀");
+      delay(250);
+      u8g2.drawUTF8(0, 64, "☁");
+      delay(250);
+      Serial.print(".");
+    }
+    restore_font();
   }
 
   {
-    const char *ip = WiFi.localIP().toString().c_str();
-    u8g2.clearBuffer();
-    u8g2.clearDisplay();
-    Serial.printf("\nConnected %s\n", ip);
-    Serial.printf("IP: %s\n", ip);
-    u8g2.drawStr(0, 20, ip);
+    Serial.printf("\nnConnected IP: %s\n", WiFi.localIP().toString());
+    u8g2.drawStr(0, 20, WiFi.localIP().toString().c_str());
     u8g2.sendBuffer();
+    delay(1000);
   }
 
+  Serial.println("* end setup");
 } 
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -73,8 +78,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
   memset(buf, 0, sizeof(buf));
   memcpy(buf, payload, min(length, sizeof(buf)-1));
   Serial.println(buf);
-  int item_no = 0;
-  char *last_start = buf;
   for (int i = 0; i < sizeof(buf); i++) {
     // pm01=0;pm2_5=1;pm10=1;aqi=4;pm2_5raw=0
     char c = buf[i];
@@ -89,17 +92,23 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
   }
 
+  // pre-measured with font and fit: 2 across x 4 down
   const int ITEM_MAX=8;
-  for (char *last_start = buf; last_start[0] != '\0'; last_start += strlen(last_start)+1) {
+
+  int item_no = 0;
+  char *last_start = buf;
+
+  for (; last_start[0] != '\0' && item_no < ITEM_MAX; last_start += strlen(last_start)+1) {
     int x = (item_no % 2) * 44;	// 36 is half, but numbers are shorter than the labels
     int y = (item_no / 2) * 10;
     Serial.printf("* item '%s' item_no = %d x=%d y=%d last_start='%s'\n", last_start, item_no, x, y, last_start);
     u8g2.drawStr(x, y, last_start);
     u8g2.sendBuffer();
-    if (++item_no >= ITEM_MAX) {
-      Serial.println("* truncating items");
-      break;
-    }
+    item_no++;
+  }
+
+  if (item_no >= ITEM_MAX) {
+    Serial.printf("* truncated items %s", last_start);
   }
 }
 
@@ -117,7 +126,6 @@ void setup() {
     ; // wait for serial port to connect. Needed for native USB port only
   }
 
-  
   u8g2_prepare();
 
   connectToWiFi();
@@ -155,14 +163,15 @@ void loop() {
 
 }
 
+void restore_font(void) {
+  // u8g2_font_6x10_tf
+  // u8g2_font_5x8_tf
+  u8g2.setFont(u8g2_font_BBSesque_tf);
+}
+
 void u8g2_prepare(void) {
   u8g2.begin();
-  // u8g2.setFont(u8g2_font_6x10_tf);
-  // u8g2.setFont();
-  u8g2.setFont(
-	       // u8g2_font_5x8_tf
-	       u8g2_font_BBSesque_tf
-  );
+  restore_font();
   u8g2.setFontRefHeightExtendedText();
   u8g2.setDrawColor(1);
   u8g2.setFontPosTop();
