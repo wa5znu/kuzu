@@ -1,6 +1,6 @@
 # Small Dust Sensor Display
 
-![](docs/dust.jpg | width=250)
+![](docs/dust.jpg)
 
 I got an very small board, an ESP32-C3 with 0.42 inch SSD1306 72x48 pixel display, the
 QWIC/Stemma type 4-pin connector, USB-C power/serial/programming, and
