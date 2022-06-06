@@ -49,12 +49,9 @@ void connectToWiFi() {
     delay(500);
   }
 
-  Serial.printf("\nnConnected IP: %s\n", WiFi.localIP().toString());
+  Serial.printf("\nConnected IP: %s\n", WiFi.localIP().toString());
   u8g2.drawStr(0, 20, WiFi.localIP().toString().c_str());
   u8g2.sendBuffer();
-  delay(1000);
-
-  Serial.println("* end setup");
 } 
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -106,8 +103,10 @@ void displayData(char* topic, byte* payload, unsigned int length) {
 void setupMQTT() {
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setCallback(callback);
+  reconnect();
+  u8g2.drawStr(0, 30, MQTT_TOPIC);
+  u8g2.sendBuffer();
 }
-
 
 void setup() {
   Wire.begin(SDA_PIN, SCL_PIN);
@@ -126,6 +125,8 @@ void setup() {
 #endif
 
   setupMQTT();
+  delay(1000);
+  Serial.println("* end setup");
 }
 
 void reconnect() {
@@ -141,7 +142,6 @@ void reconnect() {
       mqttClient.subscribe(MQTT_TOPIC);
       Serial.printf("Subscribed to topic %s\n", MQTT_TOPIC);
     }
-      
   }
 }
 
@@ -153,14 +153,14 @@ void loop() {
 #if 0
   bmePublish();
 #endif
-
 }
 
 void restore_font(void) {
   // u8g2_font_6x10_tf
   // u8g2_font_5x8_tf
+  // Follow docs at https://github.com/olikraus/u8g2/wiki/u8g2reference#setfontmode
   u8g2.setFont(u8g2_font_BBSesque_tf);
-  u8g2.setFontMode(1); // Follow docs at https://github.com/olikraus/u8g2/wiki/u8g2reference#setfontmode
+  u8g2.setFontMode(1); 
 }
 
 void u8g2_prepare(void) {
@@ -193,7 +193,6 @@ void bmePublish() {
     float temp = bme.readTemperature();
     float hum = bme.readHumidity();
     float pres = bme.readPressure() / 100;
-    
 
     // Publishing data throgh MQTT
     sprintf(data, "%f", temp);
