@@ -11,7 +11,7 @@ Unlike the RP2040, though, the ESP32-C3 includes WiFi and BLE, both useful for p
 
 The LED was a painfully bright blue from the start, so I brought in the
 Adafruit NeoPixel library to cut it back, using the Adafruit blink
-example to start with.
+example to start with, and also to give a Green-Yellow-Red range for PM 2.5 values. Green < 5, Yellow < 20, Red > 20. 
 
 I used the manufacturer-recommended 01Space Graphics Test sketch to start, then once I'd settled issues and gotten a working environment, I moved to the examples below and connected to my own internal MQTT server.
 
