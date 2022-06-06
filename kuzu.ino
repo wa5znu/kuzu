@@ -37,6 +37,7 @@ U8G2_SSD1306_72X40_ER_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);   // Ea
 
 #define NUMPIXELS 1
 #define PIN_NEOPIXEL 2
+int neopixel_color=0;
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 
 void connectToWiFi() {
@@ -62,7 +63,6 @@ void connectToWiFi() {
 
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.printf("* topic %s\n", topic);
-  wink();
   displayData(topic, payload, length);
 }
 
@@ -92,11 +92,23 @@ void displayData(char* topic, byte* payload, unsigned int length) {
 
   int item_no = 0;
   char *last_start = buf;
+  char *keyname = "";
 
   for (; last_start[0] != '\0' && item_no < ITEM_MAX; last_start += strlen(last_start)+1) {
     int x = (item_no % 2) * 44;	// 36 is half, but numbers are shorter than the labels
     int y = (item_no / 2) * 10;
-    Serial.printf("* item '%s' item_no = %d x=%d y=%d last_start='%s'\n", last_start, item_no, x, y, last_start);
+    if ((item_no % 2) == 0) {
+      keyname = last_start;
+    } else {
+      Serial.printf("* item %s='%s' item_no = %d x=%d y=%d\n", keyname, last_start, item_no, x, y);
+      if (strcmp(keyname, "PM2.5") == 0) {
+	int val = atoi(last_start);
+	if (val < 5) neopixel_color = 0x00ff00;
+	else if (val < 20) neopixel_color = 0xffff00;
+	else neopixel_color = 0xff0000;
+	shine();
+      }
+    }
     u8g2.drawStr(x, y, last_start);
     u8g2.sendBuffer();
     item_no++;
@@ -158,11 +170,13 @@ void setupNeopixel() {
   pixels.begin();
   pixels.setBrightness(0);
   // set color to please
-  pixels.fill(0x000040);
+  neopixel_color = 0x000040;
+  pixels.fill(neopixel_color);
   pixels.show();
 }
 
 void wink() {
+  pixels.fill(neopixel_color);
   pixels.setBrightness(50);
   pixels.show();
   delay(100);
@@ -170,6 +184,13 @@ void wink() {
   pixels.show();
 }
 
+void shine() {
+  const int brightness = 5;
+  Serial.printf("* neopixel shine color=0x%x brightness=%d\n", neopixel_color, brightness);
+  pixels.setBrightness(brightness);
+  pixels.fill(neopixel_color);
+  pixels.show();
+}
 
 void loop() {
   if (!mqttClient.connected()) {
