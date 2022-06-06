@@ -12,6 +12,7 @@
 #include <U8g2lib.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <Adafruit_NeoPixel.h>
 
 #ifdef U8X8_HAVE_HW_SPI
 #include <SPI.h>
@@ -34,6 +35,10 @@ PubSubClient mqttClient(wifiClient);
 // The complete list is available here: https://github.com/olikraus/u8g2/wiki/u8g2setupcpp
 U8G2_SSD1306_72X40_ER_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);   // EastRising 0.42" OLED
 
+#define NUMPIXELS 1
+#define PIN_NEOPIXEL 2
+Adafruit_NeoPixel pixels(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
+
 void connectToWiFi() {
   Serial.print("\nConnecting: ");
   u8g2.drawStr(0, 0, "Connecting");
@@ -46,7 +51,8 @@ void connectToWiFi() {
 
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
-    delay(500);
+    wink();
+    delay(400);
   }
 
   Serial.printf("\nConnected IP: %s\n", WiFi.localIP().toString());
@@ -56,6 +62,7 @@ void connectToWiFi() {
 
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.printf("* topic %s\n", topic);
+  wink();
   displayData(topic, payload, length);
 }
 
@@ -111,6 +118,8 @@ void setupMQTT() {
 void setup() {
   Wire.begin(SDA_PIN, SCL_PIN);
 
+  setupNeopixel();
+
   Serial.begin(115200);
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
@@ -144,6 +153,23 @@ void reconnect() {
     }
   }
 }
+
+void setupNeopixel() {
+  pixels.begin();
+  pixels.setBrightness(0);
+  // set color to please
+  pixels.fill(0x000040);
+  pixels.show();
+}
+
+void wink() {
+  pixels.setBrightness(50);
+  pixels.show();
+  delay(100);
+  pixels.setBrightness(0);
+  pixels.show();
+}
+
 
 void loop() {
   if (!mqttClient.connected()) {
