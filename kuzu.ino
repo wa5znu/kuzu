@@ -47,11 +47,13 @@ void connectToWiFi() {
   {
     u8g2.setFont(u8g2_font_unifont_t_symbols);
     while (WiFi.status() != WL_CONNECTED) {
-      u8g2.drawUTF8(0, 64, "☀");
+      // todo: these visuals don't work
+      u8g2.drawUTF8(20, 60, "☀"); // sun UTF-8
       delay(250);
-      u8g2.drawUTF8(0, 64, "☁");
+      u8g2.drawGlyph(20, 60, 0x23f3); // hourglass
       delay(250);
       Serial.print(".");
+      u8g2.drawGlyph(20, 60, 0x20); // uh, space? will this clear it?  
     }
     restore_font();
   }
