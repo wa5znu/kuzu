@@ -35,10 +35,6 @@ PubSubClient mqttClient(wifiClient);
 U8G2_SSD1306_72X40_ER_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);   // EastRising 0.42" OLED
 
 void connectToWiFi() {
-  u8g2.clearBuffer();
-  u8g2.clearDisplay();
-  u8g2.sendBuffer();
-
   Serial.print("Connecting: ");
   u8g2.drawStr(0, 0, "Connecting");
   u8g2.sendBuffer();
@@ -176,6 +172,10 @@ void u8g2_prepare(void) {
   u8g2.setDrawColor(1);
   u8g2.setFontPosTop();
   u8g2.setFontDirection(0);
+
+  u8g2.clearBuffer();
+  u8g2.clearDisplay();
+  u8g2.sendBuffer();
 }
 
 // BME sensor publishing - from mqtt project
