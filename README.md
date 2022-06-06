@@ -2,7 +2,7 @@
 
 ![](docs/dust.jpg)
 
-I got an very small board, an ESP32-C3 with 0.42 inch SSD1306 72x48 pixel display, the
+I got a very small board, an ESP32-C3 with 0.42 inch SSD1306 72x48 pixel display, the
 QWIC/Stemma type 4-pin connector, USB-C power/serial/programming, and
 a Neopixel-like LED.  They have them in RP2040 as well, and I have one of those on order.
 
