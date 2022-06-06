@@ -58,8 +58,12 @@ void connectToWiFi() {
 } 
 
 void callback(char* topic, byte* payload, unsigned int length) {
-  char buf[256];
   Serial.printf("* topic %s\n", topic);
+  displayData(topic, payload, length);
+}
+
+void displayData(char* topic, byte* payload, unsigned int length) {
+  char buf[256];
   u8g2.clearBuffer();
   u8g2.clearDisplay();
   memset(buf, 0, sizeof(buf));
@@ -100,7 +104,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
 
 void setupMQTT() {
-  mqttClient.setServer(mqttServer, mqttPort);
+  mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setCallback(callback);
 }
 
@@ -125,24 +129,26 @@ void setup() {
 }
 
 void reconnect() {
-  Serial.println("Connecting to MQTT Broker...");
+  Serial.printf("Connecting to MQTT Broker as ");
   while (!mqttClient.connected()) {
-      Serial.println("Reconnecting to MQTT Broker..");
-      String clientId = "ESP32Client-";
-      clientId += String(random(0xffff), HEX);
-      
-      if (mqttClient.connect(clientId.c_str())) {
-        Serial.println("Connected.");
-        // subscribe to topic
-        mqttClient.subscribe(mqttTopic);
-      }
+    String clientId = "ESP32Client-";
+    clientId += String(random(0xffff), HEX);
+    Serial.print(clientId);
+    Serial.print(" ");
+    if (mqttClient.connect(clientId.c_str())) {
+      Serial.println("connected");
+      // subscribe to topic
+      mqttClient.subscribe(MQTT_TOPIC);
+      Serial.printf("Subscribed to topic %s\n", MQTT_TOPIC);
+    }
       
   }
 }
 
 void loop() {
-  if (!mqttClient.connected())
+  if (!mqttClient.connected()) {
     reconnect();
+  }
   mqttClient.loop();
 #if 0
   bmePublish();
@@ -170,7 +176,7 @@ void u8g2_prepare(void) {
   u8g2.sendBuffer();
 }
 
-// BME sensor publishing - from mqtt project
+// BME sensor publishing - from MQTT project
 // ordered a sensor just to check it out
 
 #if 0
