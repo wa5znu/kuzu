@@ -35,7 +35,7 @@ PubSubClient mqttClient(wifiClient);
 U8G2_SSD1306_72X40_ER_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);   // EastRising 0.42" OLED
 
 void connectToWiFi() {
-  Serial.print("Connecting: ");
+  Serial.print("\nConnecting: ");
   u8g2.drawStr(0, 0, "Connecting");
   u8g2.sendBuffer();
 
@@ -44,29 +44,15 @@ void connectToWiFi() {
   u8g2.drawStr(0, 10, SSID);
   u8g2.sendBuffer();
 
-  {
-    u8g2.setFont(u8g2_font_unifont_t_symbols);
-    while (WiFi.status() != WL_CONNECTED) {
-      // todo: these visuals don't work
-      u8g2.drawUTF8(20, 60, "☀"); // sun UTF-8
-      u8g2.sendBuffer();
-      delay(250);
-      u8g2.drawGlyph(20, 60, 0x23f3); // hourglass
-      u8g2.sendBuffer();
-      delay(250);
-      Serial.print(".");
-      u8g2.drawGlyph(20, 60, 0x20); // uh, space? will this clear it?  
-      u8g2.sendBuffer();
-    }
-    restore_font();
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
   }
 
-  {
-    Serial.printf("\nnConnected IP: %s\n", WiFi.localIP().toString());
-    u8g2.drawStr(0, 20, WiFi.localIP().toString().c_str());
-    u8g2.sendBuffer();
-    delay(1000);
-  }
+  Serial.printf("\nnConnected IP: %s\n", WiFi.localIP().toString());
+  u8g2.drawStr(0, 20, WiFi.localIP().toString().c_str());
+  u8g2.sendBuffer();
+  delay(1000);
 
   Serial.println("* end setup");
 } 
@@ -168,6 +154,7 @@ void restore_font(void) {
   // u8g2_font_6x10_tf
   // u8g2_font_5x8_tf
   u8g2.setFont(u8g2_font_BBSesque_tf);
+  u8g2.setFontMode(1); // Follow docs at https://github.com/olikraus/u8g2/wiki/u8g2reference#setfontmode
 }
 
 void u8g2_prepare(void) {
