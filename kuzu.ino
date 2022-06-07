@@ -133,10 +133,11 @@ void setup() {
   setupNeopixel();
 
   Serial.begin(115200);
+#if 0
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
-
+#endif
   u8g2_prepare();
 
   connectToWiFi();
