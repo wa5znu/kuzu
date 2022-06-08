@@ -50,7 +50,7 @@ Adafruit_NeoPixel pixels(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 #define BME_ENABLE 1
 #define BME_ADDRESS (0x77)
 Adafruit_BME280 bme;
-int BME_PUBLISH_INTERVAL = 5*60*1000;
+const int BME_PUBLISH_INTERVAL = 3*30*1000;
 long last_publish_time = 0;
 char bme_topic[32];
 
@@ -181,7 +181,7 @@ void reconnect() {
   Serial.println("* Connecting to MQTT Broker");
   while (!mqttClient.connected()) {
     snprintf(esp_id, MAX_ESP_ID_LEN,"%s%08X", CLIENT_NAME_PREFIX, getChipId());
-    snprintf(bme_topic, sizeof(bme_topic)-1, "sensor/bme280/", esp_id);
+    snprintf(bme_topic, sizeof(bme_topic)-1, "sensor/bme280/%s", esp_id);
     if (mqttClient.connect(esp_id)) {
       // subscribe to topic
       mqttClient.subscribe(MQTT_DUST_TOPIC);
@@ -293,7 +293,7 @@ bool bmePublish() {
 
 void bmeLoop() {
   long now = millis();
-  if (last_publish_time == 0 || (now - last_publish_time > BME_PUBLISH_INTERVAL)) {
+  if ((last_publish_time == 0) || (now - last_publish_time > BME_PUBLISH_INTERVAL)) {
     bool ok = bmePublish();
     if (! ok) {
       Serial.println("* bmePublish failed!");
