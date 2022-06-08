@@ -13,6 +13,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <Adafruit_NeoPixel.h>
+#include <Adafruit_BME280.h>
 
 #ifdef U8X8_HAVE_HW_SPI
 #include <SPI.h>
@@ -25,20 +26,31 @@
 
 #include "secrets.h"
 
-long last_time = 0;
-char data[100];
+WiFiClient wifiClient;
 
 // MQTT client
-WiFiClient wifiClient;
-PubSubClient mqttClient(wifiClient); 
+#define CLIENT_NAME_PREFIX "kuzu_"
+#define MAX_ESP_ID_LEN 16
+char esp_id[MAX_ESP_ID_LEN];
+PubSubClient mqttClient(wifiClient);
 
+// Display
 // The complete list is available here: https://github.com/olikraus/u8g2/wiki/u8g2setupcpp
 U8G2_SSD1306_72X40_ER_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);   // EastRising 0.42" OLED
 
+// On-board Neopixel
 #define NUMPIXELS 1
 #define PIN_NEOPIXEL 2
 int neopixel_color=0;
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
+
+// BME280 sensor
+#define BME_ADDRESS (0x77)
+Adafruit_BME280 bme;
+#define BME_ENABLE 1
+int BME_PUBLISH_INTERVAL = 30*1000;
+long last_publish_time = 0;
+
 
 void connectToWiFi() {
   Serial.print("\nConnecting: ");
@@ -123,15 +135,13 @@ void setupMQTT() {
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setCallback(callback);
   reconnect();
-  u8g2.drawStr(0, 30, MQTT_TOPIC);
+  u8g2.drawStr(0, 30, MQTT_DUST_TOPIC);
   u8g2.sendBuffer();
 }
 
 void setup() {
   Wire.begin(SDA_PIN, SCL_PIN);
-
   setupNeopixel();
-
   Serial.begin(115200);
 #if 0
   while (!Serial) {
@@ -139,32 +149,35 @@ void setup() {
   }
 #endif
   u8g2_prepare();
-
   connectToWiFi();
-
-#if 0
-  setup_bme();
-#endif
-
+  setupBME();
   setupMQTT();
   delay(1000);
   Serial.println("* end setup");
 }
 
 void reconnect() {
-  Serial.printf("Connecting to MQTT Broker as ");
+  Serial.println("* Connecting to MQTT Broker");
   while (!mqttClient.connected()) {
-    String clientId = "ESP32Client-";
-    clientId += String(random(0xffff), HEX);
-    Serial.print(clientId);
-    Serial.print(" ");
-    if (mqttClient.connect(clientId.c_str())) {
-      Serial.println("connected");
+    snprintf(esp_id, MAX_ESP_ID_LEN,"%s%08X", CLIENT_NAME_PREFIX, getChipId());
+    if (mqttClient.connect(esp_id)) {
       // subscribe to topic
-      mqttClient.subscribe(MQTT_TOPIC);
-      Serial.printf("Subscribed to topic %s\n", MQTT_TOPIC);
+      mqttClient.subscribe(MQTT_DUST_TOPIC);
+      Serial.printf("* Subscribed to topic %s as %s\n", MQTT_DUST_TOPIC, esp_id);
+    } else {
+      Serial.printf("* Failed to connect to MQTT as %s\n", esp_id);
     }
   }
+}
+
+// ESP32 vbersion of ESP8266 function
+// copied from arduino-esp32/libraries/ESP32/examples/ChipID/GetChipID/GetChipID.ino
+uint32_t getChipId() {
+  uint32_t chipId = 0;
+  for(int i=0; i<17; i=i+8) {
+    chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
+  }
+  return chipId;
 }
 
 void setupNeopixel() {
@@ -197,10 +210,11 @@ void loop() {
   if (!mqttClient.connected()) {
     reconnect();
   }
-  mqttClient.loop();
-#if 0
-  bmePublish();
-#endif
+
+  if (mqttClient.connected()) {
+    mqttClient.loop();
+    bmeLoop();
+  }
 }
 
 void restore_font(void) {
@@ -225,34 +239,44 @@ void u8g2_prepare(void) {
 }
 
 // BME sensor publishing - from MQTT project
-// ordered a sensor just to check it out
-
-#if 0
-void bme_setup() {
-  if (!bme.begin(0x76)) {
-    Serial.println("Problem connecting to BME280");
+#if BME_ENABLE
+void setupBME() {
+  if (!bme.begin(BME_ADDRESS)) {
+    Serial.println("* BME280 Setup Failed");
+  } else {
+    Serial.println("* BME280 Setup OK");
   }
 }
 
-void bmePublish() {
-  long now = millis();
-  if (now - last_time > 60000) {
-    // Send data
-    float temp = bme.readTemperature();
-    float hum = bme.readHumidity();
-    float pres = bme.readPressure() / 100;
+bool bmePublish() {
+  char topic[100];
+  char payload[100];
 
-    // Publishing data throgh MQTT
-    sprintf(data, "%f", temp);
-    Serial.println(data);
-    mqttClient.publish("/swa/temperature", data);
-    sprintf(data, "%f", hum);
-    Serial.println(hum);
-    mqttClient.publish("/swa/humidity", data);
-    sprintf(data, "%f", pres);
-    Serial.println(pres);
-    mqttClient.publish("/swa/pressure", data);
-    last_time = now;
+  float temperature = bme.readTemperature();
+  float humidity = bme.readHumidity();
+  float pressure = bme.readPressure() / 100.0;
+
+  if (temperature == 0.0 && humidity == 0.0 && pressure == 0.0) {
+    Serial.println("* bmePublish data all zero - skipping");
+    return false;
+  }
+
+  snprintf(topic, sizeof(topic)-1, "sensor/bme280/", esp_id);
+  snprintf(payload, sizeof(payload)-1, "temperature=%.1f;humidity=%d;pressure=%d", temperature, round(humidity), round(pressure));
+
+  Serial.printf("* bmePublish: %s %s\n", topic, payload);
+
+  return mqttClient.publish(topic, payload);
+}
+
+void bmeLoop() {
+  long now = millis();
+  if (now - last_publish_time > BME_PUBLISH_INTERVAL) {
+    bool ok = bmePublish();
+    if (! ok) {
+      Serial.println("* bmePublish failed!");
+    }
+    last_publish_time = now;
   }
 }
 #endif
