@@ -115,7 +115,7 @@ void displayData(char* topic, byte* payload, unsigned int length) {
   }
 
   if (item_no >= ITEM_MAX) {
-    Serial.printf("* truncated items %s", last_start);
+    Serial.printf("* truncated items %s\n", last_start);
   }
 }
 
