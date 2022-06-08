@@ -14,8 +14,8 @@ I used the manufacturer-recommended 01Space Graphics Test sketch to start, then 
 
 # Provenance
 Cobbled together from these examples:
-- https://github.com/01Space/ESP32-C3-0.42LCD.git
-- https://github.com/survivingwithandroid/ESP32-MQTT.git
+- https://github.com/01Space/ESP32-C3-0.42LCD
+- https://github.com/survivingwithandroid/ESP32-MQTT
 
 # Issues Overcome
 - Set CDC on Boot in Arduino IDE Menu to make Serial.print work
