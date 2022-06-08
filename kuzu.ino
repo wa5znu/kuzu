@@ -13,7 +13,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <Adafruit_NeoPixel.h>
-#include <Adafruit_BME280.h>
+
 
 #ifdef U8X8_HAVE_HW_SPI
 #include <SPI.h>
@@ -34,8 +34,6 @@ WiFiClient wifiClient;
 char esp_id[MAX_ESP_ID_LEN];
 PubSubClient mqttClient(wifiClient);
 
-
-
 // Display
 // The complete list is available here: https://github.com/olikraus/u8g2/wiki/u8g2setupcpp
 U8G2_SSD1306_72X40_ER_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);   // EastRising 0.42" OLED
@@ -47,12 +45,14 @@ int neopixel_color=0;
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 
 // BME280 sensor
-#define BME_ENABLE 1
+#if BME_ENABLE
+#include <Adafruit_BME280.h>
 #define BME_ADDRESS (0x77)
 Adafruit_BME280 bme;
 const int BME_PUBLISH_INTERVAL = 3*30*1000;
 long last_publish_time = 0;
 char bme_topic[32];
+#endif
 
 typedef void (*kvCallback)(const char *topic, const char *key, const char *value);
 
@@ -98,9 +98,11 @@ void mqtt_event_callback(char* topic, byte* payload, unsigned int length) {
   if (topic && strcmp(MQTT_DUST_TOPIC, topic) == 0) {
     displayKVData(topic, payload, length, &PM25_kvCallback);
   }
+#if BME_ENABLE
   if (topic && strcmp(bme_topic, topic) == 0) {
     displayKVData(topic, payload, length, &BME_kvCallback);
   }
+#endif
 }
 
 void displayKVData(char* topic, byte* payload, unsigned int length, kvCallback kvCallback) {
@@ -171,7 +173,9 @@ void setup() {
 #endif
   u8g2_prepare();
   connectToWiFi();
+#if BME_ENABLE
   setupBME();
+#endif
   setupMQTT();
   delay(1000);
   Serial.println("* end setup");
@@ -181,13 +185,15 @@ void reconnect() {
   Serial.println("* Connecting to MQTT Broker");
   while (!mqttClient.connected()) {
     snprintf(esp_id, MAX_ESP_ID_LEN,"%s%08X", CLIENT_NAME_PREFIX, getChipId());
-    snprintf(bme_topic, sizeof(bme_topic)-1, "sensor/bme280/%s", esp_id);
     if (mqttClient.connect(esp_id)) {
       // subscribe to topic
       mqttClient.subscribe(MQTT_DUST_TOPIC);
       Serial.printf("* Subscribed to topic %s as %s\n", MQTT_DUST_TOPIC, esp_id);
+#if BME_ENABLE
+      snprintf(bme_topic, sizeof(bme_topic)-1, "sensor/bme280/%s", esp_id);
       mqttClient.subscribe(bme_topic);
       Serial.printf("* Subscribed to topic %s as %s\n", bme_topic, esp_id);
+#endif
     } else {
       Serial.printf("* Failed to connect to MQTT as %s\n", esp_id);
     }
@@ -237,7 +243,9 @@ void loop() {
 
   if (mqttClient.connected()) {
     mqttClient.loop();
+#if BME_ENABLE
     bmeLoop();
+#endif
   }
 }
 
@@ -273,7 +281,7 @@ void setupBME() {
 }
 
 bool bmePublish() {
-  char payload[100];
+  char payload[256];
 
   float temperature = bme.readTemperature();
   float humidity = bme.readHumidity();
