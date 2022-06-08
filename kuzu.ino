@@ -92,7 +92,7 @@ void displayData(char* topic, byte* payload, unsigned int length) {
 
   int item_no = 0;
   char *last_start = buf;
-  char *keyname = "";
+  const char *keyname = "";
 
   for (; last_start[0] != '\0' && item_no < ITEM_MAX; last_start += strlen(last_start)+1) {
     int x = (item_no % 2) * 44;	// 36 is half, but numbers are shorter than the labels
