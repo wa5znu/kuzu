@@ -34,6 +34,8 @@ WiFiClient wifiClient;
 char esp_id[MAX_ESP_ID_LEN];
 PubSubClient mqttClient(wifiClient);
 
+
+
 // Display
 // The complete list is available here: https://github.com/olikraus/u8g2/wiki/u8g2setupcpp
 U8G2_SSD1306_72X40_ER_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);   // EastRising 0.42" OLED
@@ -45,12 +47,14 @@ int neopixel_color=0;
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 
 // BME280 sensor
+#define BME_ENABLE 1
 #define BME_ADDRESS (0x77)
 Adafruit_BME280 bme;
-#define BME_ENABLE 1
-int BME_PUBLISH_INTERVAL = 30*1000;
+int BME_PUBLISH_INTERVAL = 5*60*1000;
 long last_publish_time = 0;
+char bme_topic[32];
 
+typedef void (*kvCallback)(const char *topic, const char *key, const char *value);
 
 void connectToWiFi() {
   Serial.print("\nConnecting: ");
@@ -73,12 +77,33 @@ void connectToWiFi() {
   u8g2.sendBuffer();
 } 
 
-void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.printf("* topic %s\n", topic);
-  displayData(topic, payload, length);
+// called on each MQTT parsed 'k=v;'
+// you must inspect topic, key, value
+void PM25_kvCallback(const char *topic, const char *key, const char *value) {
+  if (strcmp(topic, MQTT_DUST_TOPIC)== 0 && strcmp(key, "PM2.5") == 0) {
+    int val = atoi(value);
+    if (val < 5) neopixel_color = 0x00ff00;
+    else if (val < 20) neopixel_color = 0xffff00;
+    else neopixel_color = 0xff0000;
+    shine();
+  }
 }
 
-void displayData(char* topic, byte* payload, unsigned int length) {
+void BME_kvCallback(const char *topic, const char *key, const char *value) {
+  return;
+}
+
+void mqtt_event_callback(char* topic, byte* payload, unsigned int length) {
+  Serial.printf("* topic %s\n", topic);
+  if (topic && strcmp(MQTT_DUST_TOPIC, topic) == 0) {
+    displayKVData(topic, payload, length, &PM25_kvCallback);
+  }
+  if (topic && strcmp(bme_topic, topic) == 0) {
+    displayKVData(topic, payload, length, &BME_kvCallback);
+  }
+}
+
+void displayKVData(char* topic, byte* payload, unsigned int length, kvCallback kvCallback) {
   char buf[256];
   u8g2.clearBuffer();
   u8g2.clearDisplay();
@@ -113,12 +138,8 @@ void displayData(char* topic, byte* payload, unsigned int length) {
       keyname = last_start;
     } else {
       Serial.printf("* item %s='%s' item_no = %d x=%d y=%d\n", keyname, last_start, item_no, x, y);
-      if (strcmp(keyname, "PM2.5") == 0) {
-	int val = atoi(last_start);
-	if (val < 5) neopixel_color = 0x00ff00;
-	else if (val < 20) neopixel_color = 0xffff00;
-	else neopixel_color = 0xff0000;
-	shine();
+      if (kvCallback != NULL) {
+	(*kvCallback)(topic, keyname, last_start);
       }
     }
     u8g2.drawStr(x, y, last_start);
@@ -133,7 +154,7 @@ void displayData(char* topic, byte* payload, unsigned int length) {
 
 void setupMQTT() {
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
-  mqttClient.setCallback(callback);
+  mqttClient.setCallback(mqtt_event_callback);
   reconnect();
   u8g2.drawStr(0, 30, MQTT_DUST_TOPIC);
   u8g2.sendBuffer();
@@ -160,10 +181,13 @@ void reconnect() {
   Serial.println("* Connecting to MQTT Broker");
   while (!mqttClient.connected()) {
     snprintf(esp_id, MAX_ESP_ID_LEN,"%s%08X", CLIENT_NAME_PREFIX, getChipId());
+    snprintf(bme_topic, sizeof(bme_topic)-1, "sensor/bme280/", esp_id);
     if (mqttClient.connect(esp_id)) {
       // subscribe to topic
       mqttClient.subscribe(MQTT_DUST_TOPIC);
       Serial.printf("* Subscribed to topic %s as %s\n", MQTT_DUST_TOPIC, esp_id);
+      mqttClient.subscribe(bme_topic);
+      Serial.printf("* Subscribed to topic %s as %s\n", bme_topic, esp_id);
     } else {
       Serial.printf("* Failed to connect to MQTT as %s\n", esp_id);
     }
@@ -249,7 +273,6 @@ void setupBME() {
 }
 
 bool bmePublish() {
-  char topic[100];
   char payload[100];
 
   float temperature = bme.readTemperature();
@@ -261,17 +284,16 @@ bool bmePublish() {
     return false;
   }
 
-  snprintf(topic, sizeof(topic)-1, "sensor/bme280/", esp_id);
-  snprintf(payload, sizeof(payload)-1, "temperature=%.1f;humidity=%d;pressure=%d", temperature, round(humidity), round(pressure));
+  snprintf(payload, sizeof(payload)-1, "temp=%.1f;hum=%.0f;press=%.0f", temperature, humidity, pressure);
 
-  Serial.printf("* bmePublish: %s %s\n", topic, payload);
+  Serial.printf("* bmePublish: %s %s\n", bme_topic, payload);
 
-  return mqttClient.publish(topic, payload);
+  return mqttClient.publish(bme_topic, payload);
 }
 
 void bmeLoop() {
   long now = millis();
-  if (now - last_publish_time > BME_PUBLISH_INTERVAL) {
+  if (last_publish_time == 0 || (now - last_publish_time > BME_PUBLISH_INTERVAL)) {
     bool ok = bmePublish();
     if (! ok) {
       Serial.println("* bmePublish failed!");
