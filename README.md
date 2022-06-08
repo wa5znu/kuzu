@@ -24,6 +24,10 @@ Cobbled together from these examples:
 - As always, string parsing in C
 - Can't find a font size that supports more than four key-value lines on LCD
 
+# Issues not yet overcome
+- style and utility
+- can we read the B button for UI
+
 # References
 - https://www.banggood.com/ESP32-C3-0_42-inch-LCD-Development-Board-RISC-V-WiFi-Bluetooth-Arduino-or-Micropython-p-1947665.html
 - https://github.com/01Space/ESP32-C3-0.42LCD
