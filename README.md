@@ -10,7 +10,7 @@ The LED was a painfully bright blue from the start, so I brought in the
 Adafruit NeoPixel library to cut it back, using the Adafruit blink
 example to start with, and also to give a Green-Yellow-Red range for PM 2.5 values. Green < 5, Yellow < 20, Red > 20. 
 
-I used the manufacturer-recommended 01Space Graphics Test sketch to start, then once I'd settled issues and gotten a working environment, I moved to the examples below and connected to my own internal MQTT server.
+I used the manufacturer's 01Space Graphics Test sketch to start, then once I'd settled issues and gotten a working environment, I moved to following the examples below and connected to my own local MQTT brokers. Since the MQTT sketch included a BME280, I ordered a Qwiic/Stemma breakout board from Adafruit, and integrated that in as well.
 
 # Provenance
 Cobbled together from these examples:
@@ -19,7 +19,6 @@ Cobbled together from these examples:
 
 # Issues Overcome
 - Set CDC on Boot in Arduino IDE Menu to make Serial.print work
-- Direct USB-C cable to Linux desktop worked best
 - Multiple copies of u8g2 and u8g2_arduino installed with different fonts
 - As always, string parsing in C
 - Can't find a font size that supports more than four key-value lines on LCD
