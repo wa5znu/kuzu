@@ -3,7 +3,7 @@
 ![](docs/dust.jpg)
 
 I bought a very small SoC board, an ESP32-C3 with a tiny 0.42 inch SSD1306 72x48 pixel display, a
-QWIC/Stemma type 4-pin connector, USB-C power/serial/programming, and
+Qwiic/Stemma type 4-pin connector, USB-C power/serial/programming, and
 a Neopixel-like LED.
 
 The LED was a painfully bright blue from the start, so I brought in the
