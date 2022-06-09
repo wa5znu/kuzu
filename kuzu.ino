@@ -145,9 +145,9 @@ void displayKVData(char* topic, byte* payload, unsigned int length, kvCallback k
       }
     }
     u8g2.drawStr(x, y, last_start);
-    u8g2.sendBuffer();
     item_no++;
   }
+  u8g2.sendBuffer();
 
   if (item_no >= ITEM_MAX) {
     Serial.printf("* truncated items %s\n", last_start);
