@@ -54,6 +54,10 @@ long last_publish_time = 0;
 char bme_topic[32];
 #endif
 
+// Tables
+const int TABLE_ITEM_MAX=8;
+
+
 typedef void (*kvCallback)(const char *topic, const char *key, const char *value);
 
 void connectToWiFi() {
@@ -105,51 +109,70 @@ void mqtt_event_callback(char* topic, byte* payload, unsigned int length) {
 #endif
 }
 
-void displayKVData(char* topic, byte* payload, unsigned int length, kvCallback kvCallback) {
+void displayKVData(char* topic, byte* payload, unsigned int payload_length, kvCallback kvCallback) {
   char buf[256];
   u8g2.clearBuffer();
   u8g2.clearDisplay();
-  memset(buf, 0, sizeof(buf));
-  memcpy(buf, payload, min(length, sizeof(buf)-1));
-  Serial.println(buf);
-  for (int i = 0; i < sizeof(buf); i++) {
+
+  Serial.printf("* parsing payload: %s\n", payload);
+  
+  // separate "k=v;"* payload into alternating k and v strings in buf, etc.
+  parseKV(buf, sizeof(buf), payload, payload_length);
+
+  // lay out alternating strings in buf as keys and values,
+  // in a two-column table: 2 across x 4 down, 1 page.
+  drawTable(buf, topic, kvCallback);
+}
+
+// separate "k=v;" message into alternating k and v strings
+// by replacing separators with NUL, uppercasing keys, etc.
+void parseKV(char *buf, int sizeof_buf, byte *payload, int payload_length) {
+  memset(buf, 0, sizeof_buf);
+  memcpy(buf, payload, min(payload_length, sizeof_buf-1));
+  boolean iskey = true;
+  for (int i = 0; i < sizeof_buf; i++) {
     // pm01=0;pm2_5=1;pm10=1;aqi=4;pm2_5raw=0
     char c = buf[i];
     if (c == '_') {
       buf[i] = '.';
     } else if (c == '=') {
+      iskey = false;
       buf[i] = '\0';
     } else if (c == ';' || c == '\r' || c == '\n') {
+      iskey = true;
       buf[i] = '\0';
-    } else {
+    } else if (iskey) {
       buf[i] = toupper(c);
     }
+    // PM01^@0^@PM2.5^@1^@PM10^@1^@AQI^@4^@PM2.5RAW^@0^@
   }
+}
 
-  // pre-measured with font and fit: 2 across x 4 down
-  const int ITEM_MAX=8;
-
-  int item_no = 0;
+// returns number of items drawn
+// won't go over TABLE_ITEM_MAX
+// pre-measured with font u8g2_font_BBSesque_tf for fit
+void drawTable(char *buf, const char *topic, kvCallback kvCallback) {
   char *last_start = buf;
   const char *keyname = "";
 
-  for (; last_start[0] != '\0' && item_no < ITEM_MAX; last_start += strlen(last_start)+1) {
-    int x = (item_no % 2) * 44;	// 36 is half, but numbers are shorter than the labels
-    int y = (item_no / 2) * 10;
-    if ((item_no % 2) == 0) {
+  int i = 0;
+  for (; last_start[0] != '\0' && i < TABLE_ITEM_MAX; last_start += strlen(last_start)+1) {
+    int x = (i % 2) * 44;	// 36 is half, but numbers are shorter than the labels
+    int y = (i / 2) * 10;
+    if ((i % 2) == 0) {
       keyname = last_start;
     } else {
-      Serial.printf("* item %s='%s' item_no = %d x=%d y=%d\n", keyname, last_start, item_no, x, y);
+      Serial.printf("* item %s='%s' i = %d x=%d y=%d\n", keyname, last_start, i, x, y);
       if (kvCallback != NULL) {
 	(*kvCallback)(topic, keyname, last_start);
       }
     }
     u8g2.drawStr(x, y, last_start);
-    item_no++;
+    i++;
   }
   u8g2.sendBuffer();
 
-  if (item_no >= ITEM_MAX) {
+  if (i >= TABLE_ITEM_MAX) {
     Serial.printf("* truncated items %s\n", last_start);
   }
 }
