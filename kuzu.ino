@@ -1,5 +1,5 @@
 /**
- * kuzo - small dust sensor display
+ * kuzu - small dust sensor display
  *
  * Copyright 2022 Leigh L. Klotz, Jr. <leigh@wa5znu.org>
  * MIT License - see file LICENSE
