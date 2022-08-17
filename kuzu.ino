@@ -315,7 +315,7 @@ bool bmePublish() {
     return false;
   }
 
-  snprintf(payload, sizeof(payload)-1, "temp=%.1f;hum=%.0f;press=%.0f", temperature, humidity, pressure);
+  snprintf(payload, sizeof(payload)-1, "temp=%.2f;hum=%.2f;press=%.3f", temperature, humidity, pressure);
 
   Serial.printf("* bmePublish: %s %s\n", bme_topic, payload);
 

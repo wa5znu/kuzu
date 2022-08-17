@@ -1,4 +1,6 @@
-# Small Dust Sensor Display
+# Small Environment Sensor Display
+
+Displays readings from MQTT bus, and optionally publishes BME280 temperature, humidity, and pressure.
 
 ![](docs/dust.jpg)
 
