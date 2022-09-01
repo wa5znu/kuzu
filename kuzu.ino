@@ -33,6 +33,7 @@ WiFiClient wifiClient;
 #define MAX_ESP_ID_LEN 16
 char esp_id[MAX_ESP_ID_LEN];
 PubSubClient mqttClient(wifiClient);
+#define MAX_PAYLOAD_SIZE (255)
 
 // Display
 // The complete list is available here: https://github.com/olikraus/u8g2/wiki/u8g2setupcpp
@@ -110,12 +111,10 @@ void mqtt_event_callback(char* topic, byte* payload, unsigned int length) {
 }
 
 void displayKVData(char* topic, byte* payload, unsigned int payload_length, kvCallback kvCallback) {
-  char buf[256];
+  char buf[MAX_PAYLOAD_SIZE+1];
   u8g2.clearBuffer();
   u8g2.clearDisplay();
 
-  Serial.printf("* parsing payload: %s\n", payload);
-  
   // separate "k=v;"* payload into alternating k and v strings in buf, etc.
   parseKV(buf, sizeof(buf), payload, payload_length);
 
@@ -129,6 +128,8 @@ void displayKVData(char* topic, byte* payload, unsigned int payload_length, kvCa
 void parseKV(char *buf, int sizeof_buf, byte *payload, int payload_length) {
   memset(buf, 0, sizeof_buf);
   memcpy(buf, payload, min(payload_length, sizeof_buf-1));
+  Serial.printf("* parsing payload: %s\n", buf);
+  
   boolean iskey = true;
   for (int i = 0; i < sizeof_buf; i++) {
     // pm01=0;pm2_5=1;pm10=1;aqi=4;pm2_5raw=0
@@ -304,7 +305,7 @@ void setupBME() {
 }
 
 bool bmePublish() {
-  char payload[256];
+  char payload[MAX_PAYLOAD_SIZE+1];
 
   float temperature = bme.readTemperature();
   float humidity = bme.readHumidity();
@@ -315,7 +316,7 @@ bool bmePublish() {
     return false;
   }
 
-  snprintf(payload, sizeof(payload)-1, "temp=%.2f;hum=%.2f;press=%.3f", temperature, humidity, pressure);
+  snprintf(payload, sizeof(payload)-1, "temp=%.3f;hum=%.3f;press=%.3f", temperature, humidity, pressure);
 
   Serial.printf("* bmePublish: %s %s\n", bme_topic, payload);
 
